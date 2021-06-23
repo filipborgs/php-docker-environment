@@ -1,0 +1,52 @@
+version: "3"
+networks:
+  php_service_network:
+  postgres_service_network:
+
+services:
+  nginx_service:
+    image: nginx:stable-alpine
+    container_name: service-nginx
+    ports:
+      - "8000:80"
+    volumes:
+      - .:/var/www/html
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - php_service
+      - postgres
+    networks:
+      - php_service_network
+
+  php_service:
+    build: .
+    container_name: service-php
+    working_dir: /var/www/html
+    depends_on:
+      - postgres
+    volumes:
+      # Root folder of you laravel project
+      - .:/var/www/html
+      # If you want to use xdebug copy this file into the container
+      - ./xdebug/docker-xdebug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+    networks:
+      - php_service_network
+      - postgres_service_network
+
+  postgres:
+    image: postgres:13
+    container_name: service-postgres
+    environment: 
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      SERVICE_NAME: service-postgres
+    volumes: 
+      # Folder to save the postgres databases
+      - ~/volumes/banco/postgres:/var/lib/postgresql/data
+      # If you want to copy backups into the container
+      - ~/volumes/backup:/backup
+    networks: 
+      - postgres_service_network
+    # if you want to expose the ports to use outside the container
+    ports: 
+      - "5432:5432"
